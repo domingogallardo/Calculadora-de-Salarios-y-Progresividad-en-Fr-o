@@ -82,6 +82,23 @@ Año  | Bruto anual | Coste empresa | SS empresa | SS trabajador | IRPF       | 
 2026 | 30,000.00 € |   39,645.00 € | 9,645.00 € |    1,950.00 € | 4,926.00 € | 23,124.00 € |         1,927.00 €
 ```
 
+## Comparar con IPC
+
+Compara un salario actual con el salario equivalente de un año anterior manteniendo la misma capacidad económica real. Por defecto compara contra 2019 y usa 2026 como año actual.
+
+```bash
+python3 cli.py ipc 30000 --anio-base 2019 --anio-actual 2026
+```
+
+Salida:
+
+```text
+Concepto    | Año  | Bruto anual | IPC acumulado | IRPF       | Neto anual  | Neto en euros 2026 | Dif. anual vs actual | Dif. mensual (12p)
+------------+------+-------------+---------------+------------+-------------+--------------------+----------------------+-------------------
+2019 equiv. | 2019 | 23,843.46 € |       1.2582x | 3,209.82 € | 19,119.58 € |        24,056.38 € |             932.38 € |            77.70 €
+2026 actual | 2026 | 30,000.00 € |       1.0000x | 4,926.00 € | 23,124.00 € |        23,124.00 € |               0.00 € |             0.00 €
+```
+
 ## Tipo marginal efectivo
 
 Muestra cuánto sube el neto anual por cada subida de bruto dentro de un rango. Es útil para ver zonas donde una subida salarial se convierte en poco neto disponible.

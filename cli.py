@@ -78,6 +78,41 @@ def calcular_marginal(anio, desde, hasta, paso):
     return filas
 
 
+def calcular_comparativa_ipc(bruto_actual, anio_base, anio_actual, pagas):
+    inflacion = MOTOR["obtener_inflacion_acumulada"](anio_base, anio_actual)
+    bruto_base = bruto_actual / inflacion
+
+    base = calcular_nomina_resumen(bruto_base, anio_base, pagas)
+    actual = calcular_nomina_resumen(bruto_actual, anio_actual, pagas)
+    neto_base_actualizado = base["Neto anual"] * inflacion
+    diferencia_anual = neto_base_actualizado - actual["Neto anual"]
+
+    return [
+        {
+            "Concepto": f"{anio_base} equiv.",
+            "Año": anio_base,
+            "Bruto anual": bruto_base,
+            "IPC acumulado": inflacion,
+            "IRPF": base["IRPF"],
+            "Neto anual": base["Neto anual"],
+            f"Neto en euros {anio_actual}": neto_base_actualizado,
+            "Dif. anual vs actual": diferencia_anual,
+            f"Dif. mensual ({pagas}p)": diferencia_anual / pagas,
+        },
+        {
+            "Concepto": f"{anio_actual} actual",
+            "Año": anio_actual,
+            "Bruto anual": bruto_actual,
+            "IPC acumulado": 1.0,
+            "IRPF": actual["IRPF"],
+            "Neto anual": actual["Neto anual"],
+            f"Neto en euros {anio_actual}": actual["Neto anual"],
+            "Dif. anual vs actual": 0.0,
+            f"Dif. mensual ({pagas}p)": 0.0,
+        },
+    ]
+
+
 def imprimir_tabla(filas):
     if not filas:
         print("No hay filas para mostrar.")
@@ -91,8 +126,12 @@ def imprimir_tabla(filas):
             valor = fila[columna]
             if columna == "Año":
                 valores.append(str(valor))
+            elif columna in {"Concepto"}:
+                valores.append(str(valor))
             elif columna == "Tipo marginal efectivo":
                 valores.append(f"{valor:,.2f} %")
+            elif columna == "IPC acumulado":
+                valores.append(f"{valor:,.4f}x")
             else:
                 valores.append(formatear_euros(valor))
         filas_texto.append(valores)
@@ -144,6 +183,20 @@ def cmd_marginal(args):
     imprimir_tabla(calcular_marginal(args.anio, args.desde, args.hasta, args.paso))
 
 
+def cmd_ipc(args):
+    if args.anio_base >= args.anio_actual:
+        raise SystemExit("--anio-base debe ser anterior a --anio-actual")
+
+    imprimir_tabla(
+        calcular_comparativa_ipc(
+            args.bruto_actual,
+            args.anio_base,
+            args.anio_actual,
+            args.pagas,
+        )
+    )
+
+
 def crear_parser():
     parser = argparse.ArgumentParser(
         description="Consulta rápida de salario neto, IRPF y Seguridad Social en España (2012-2026)."
@@ -180,6 +233,16 @@ def crear_parser():
     marginal.add_argument("--hasta", type=float, default=25000, help="Último bruto anual.")
     marginal.add_argument("--paso", type=float, default=500, help="Salto entre salarios.")
     marginal.set_defaults(func=cmd_marginal)
+
+    ipc = subparsers.add_parser(
+        "ipc",
+        help="Compara un salario actual con su equivalente real en un año anterior.",
+    )
+    ipc.add_argument("bruto_actual", type=float, help="Salario bruto anual del año actual.")
+    ipc.add_argument("--anio-base", type=int, default=2019, choices=range(2012, 2027), metavar="YYYY")
+    ipc.add_argument("--anio-actual", type=int, default=2026, choices=range(2012, 2027), metavar="YYYY")
+    ipc.add_argument("--pagas", type=int, default=12, help="Número de pagas para la diferencia mensual.")
+    ipc.set_defaults(func=cmd_ipc)
 
     return parser
 
