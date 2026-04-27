@@ -95,3 +95,33 @@ La salida es equivalente a `python3 cli.py salario 30000 --anio 2026`.
 ## Nota
 
 El CLI reutiliza las funciones de `Calculo_Salario_IRPF.py`, pero evita ejecutar la sección final que genera `Auditoria_Integral_Nominas_e_Inflacion_2012_2026.xlsx`.
+
+## Validación
+
+Para comprobar que el CLI devuelve resultados coherentes con el Excel masivo, se generó localmente el archivo completo ejecutando:
+
+```bash
+python3 Calculo_Salario_IRPF.py
+```
+
+Resultado de la validación:
+
+```text
+Archivo generado: Auditoria_Integral_Nominas_e_Inflacion_2012_2026.xlsx
+Tamaño aproximado: 144.8 MB
+Hojas: 18
+DAT_2012, DAT_2024, DAT_2025, DAT_2026: 100002 filas cada una, incluyendo cabecera
+```
+
+También se compararon filas representativas del Excel contra el motor usado por el CLI:
+
+```text
+OK DAT_2026 bruto 30000: neto 23,124.00 €
+OK DAT_2026 bruto 50000: neto 35,545.50 €
+OK DAT_2025 bruto 30000: neto 23,128.20 €
+OK DAT_2024 bruto 30000: neto 23,130.30 €
+OK DAT_2012 bruto 30000: neto 22,666.59 €
+VALIDACION_OK
+```
+
+El Excel masivo no se incluye en el repositorio porque es un artefacto pesado y reproducible.
