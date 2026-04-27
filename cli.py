@@ -45,6 +45,39 @@ def calcular_nomina_resumen(bruto, anio, pagas):
     }
 
 
+def calcular_marginal(anio, desde, hasta, paso):
+    salarios = np.arange(desde, hasta + paso, paso)
+    filas = []
+    anterior = None
+
+    for bruto in salarios:
+        if bruto > hasta:
+            continue
+
+        resumen = calcular_nomina_resumen(float(bruto), anio, pagas=12)
+        fila = {
+            "Año": anio,
+            "Bruto anual": resumen["Bruto anual"],
+            "Neto anual": resumen["Neto anual"],
+            "Subida bruta": 0.0,
+            "Subida neta": 0.0,
+            "Tipo marginal efectivo": 0.0,
+        }
+
+        if anterior is not None:
+            subida_bruta = fila["Bruto anual"] - anterior["Bruto anual"]
+            subida_neta = fila["Neto anual"] - anterior["Neto anual"]
+            fila["Subida bruta"] = subida_bruta
+            fila["Subida neta"] = subida_neta
+            if subida_bruta:
+                fila["Tipo marginal efectivo"] = (1 - subida_neta / subida_bruta) * 100
+
+        filas.append(fila)
+        anterior = fila
+
+    return filas
+
+
 def imprimir_tabla(filas):
     if not filas:
         print("No hay filas para mostrar.")
@@ -56,7 +89,12 @@ def imprimir_tabla(filas):
         valores = []
         for columna in columnas:
             valor = fila[columna]
-            valores.append(str(valor) if columna == "Año" else formatear_euros(valor))
+            if columna == "Año":
+                valores.append(str(valor))
+            elif columna == "Tipo marginal efectivo":
+                valores.append(f"{valor:,.2f} %")
+            else:
+                valores.append(formatear_euros(valor))
         filas_texto.append(valores)
 
     anchos = [
@@ -97,6 +135,15 @@ def cmd_comparar(args):
     imprimir_tabla(filas)
 
 
+def cmd_marginal(args):
+    if args.desde > args.hasta:
+        raise SystemExit("--desde no puede ser mayor que --hasta")
+    if args.paso <= 0:
+        raise SystemExit("--paso debe ser mayor que 0")
+
+    imprimir_tabla(calcular_marginal(args.anio, args.desde, args.hasta, args.paso))
+
+
 def crear_parser():
     parser = argparse.ArgumentParser(
         description="Consulta rápida de salario neto, IRPF y Seguridad Social en España (2012-2026)."
@@ -123,6 +170,16 @@ def crear_parser():
     comparar.add_argument("--hasta-anio", type=int, default=2026, choices=range(2012, 2027), metavar="YYYY")
     comparar.add_argument("--pagas", type=int, default=12, help="Número de pagas para el neto mensual.")
     comparar.set_defaults(func=cmd_comparar)
+
+    marginal = subparsers.add_parser(
+        "marginal",
+        help="Muestra cuánto neto queda de cada subida bruta dentro de un rango.",
+    )
+    marginal.add_argument("--anio", type=int, default=2026, choices=range(2012, 2027), metavar="YYYY")
+    marginal.add_argument("--desde", type=float, default=15000, help="Primer bruto anual.")
+    marginal.add_argument("--hasta", type=float, default=25000, help="Último bruto anual.")
+    marginal.add_argument("--paso", type=float, default=500, help="Salto entre salarios.")
+    marginal.set_defaults(func=cmd_marginal)
 
     return parser
 

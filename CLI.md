@@ -82,6 +82,26 @@ Año  | Bruto anual | Coste empresa | SS empresa | SS trabajador | IRPF       | 
 2026 | 30,000.00 € |   39,645.00 € | 9,645.00 € |    1,950.00 € | 4,926.00 € | 23,124.00 € |         1,927.00 €
 ```
 
+## Tipo marginal efectivo
+
+Muestra cuánto sube el neto anual por cada subida de bruto dentro de un rango. Es útil para ver zonas donde una subida salarial se convierte en poco neto disponible.
+
+```bash
+python3 cli.py marginal --anio 2026 --desde 16500 --hasta 18500 --paso 500
+```
+
+Salida:
+
+```text
+Año  | Bruto anual | Neto anual  | Subida bruta | Subida neta | Tipo marginal efectivo
+-----+-------------+-------------+--------------+-------------+-----------------------
+2026 | 16,500.00 € | 15,427.50 € |       0.00 € |      0.00 € |                 0.00 %
+2026 | 17,000.00 € | 15,895.00 € |     500.00 € |    467.50 € |                 6.50 %
+2026 | 17,500.00 € | 16,082.95 € |     500.00 € |    187.95 € |                62.41 %
+2026 | 18,000.00 € | 16,206.18 € |     500.00 € |    123.23 € |                75.35 %
+2026 | 18,500.00 € | 16,329.42 € |     500.00 € |    123.23 € |                75.35 %
+```
+
 ## Ejecutar como script
 
 `cli.py` puede ejecutarse directamente si tiene permisos de ejecución:
