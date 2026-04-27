@@ -1,107 +1,42 @@
 # CLI de consulta rápida
 
-Este fichero documenta `cli.py`, una capa ligera para consultar cálculos de salario sin generar el Excel masivo.
+`cli.py` permite consultar el motor fiscal sin generar el Excel masivo. El caso principal es comparar un salario actual con su equivalente real en 2019, ajustando por IPC.
 
-## Requisitos
+## Uso principal: 2019 vs 2026
 
-Instala las dependencias del proyecto:
-
-```bash
-python3 -m pip install -r requirements.txt
-```
-
-## Ayuda
+Por defecto, `ipc` compara un salario de 2026 contra su equivalente de 2019 con la misma capacidad económica real.
 
 ```bash
-python3 cli.py --help
-```
-
-## Calcular un salario
-
-Calcula el desglose para un bruto anual concreto. Por defecto usa el año 2026 y 12 pagas.
-
-```bash
-python3 cli.py salario 30000
+python3 cli.py ipc 30000
 ```
 
 Salida:
 
 ```text
-Año  | Bruto anual | Coste empresa | SS empresa | SS trabajador | IRPF       | Neto anual  | Neto mensual (12p)
------+-------------+---------------+------------+---------------+------------+-------------+-------------------
-2026 | 30,000.00 € |   39,645.00 € | 9,645.00 € |    1,950.00 € | 4,926.00 € | 23,124.00 € |         1,927.00 €
+Concepto    | Año  | Bruto nominal | Bruto 2026  | IPC     | IRPF 2026  | Tipo IRPF | Dif. tipo | Neto 2026   | Dif. IRPF | Dif. neto/mes (12p)
+------------+------+---------------+-------------+---------+------------+-----------+-----------+-------------+-----------+--------------------
+2019 equiv. | 2019 |   23,843.46 € | 30,000.00 € | 1.2582x | 4,038.62 € |   13.46 % | 0.00 p.p. | 24,056.38 € |    0.00 € |              0.00 €
+2026 actual | 2026 |   30,000.00 € | 30,000.00 € | 1.0000x | 4,926.00 € |   16.42 % | 2.96 p.p. | 23,124.00 € |  887.38 € |            -77.70 €
 ```
 
-Con año y número de pagas:
+Cómo leerlo:
 
-```bash
-python3 cli.py salario 50000 --anio 2026 --pagas 14
-```
+- `2019 equiv.`: salario nominal de 2019 que equivale a `30.000 €` de 2026 tras aplicar IPC.
+- `IRPF 2026`: IRPF expresado en euros comparables de 2026.
+- `Tipo IRPF`: IRPF dividido entre el bruto equivalente de 2026.
+- `Dif. tipo`: aumento del tipo efectivo frente al caso equivalente de 2019.
+- `Dif. IRPF`: cuánto más IRPF se paga frente al caso equivalente de 2019.
+- `Dif. neto/mes`: pérdida o ganancia mensual neta frente al caso equivalente de 2019.
 
-Salida:
-
-```text
-Año  | Bruto anual | Coste empresa | SS empresa  | SS trabajador | IRPF        | Neto anual  | Neto mensual (14p)
------+-------------+---------------+-------------+---------------+-------------+-------------+-------------------
-2026 | 50,000.00 € |   66,075.00 € | 16,075.00 € |    3,250.00 € | 11,204.50 € | 35,545.50 € |         2,538.96 €
-```
-
-## Tabla por rango salarial
-
-Genera una tabla pequeña entre dos brutos, con el salto indicado.
-
-```bash
-python3 cli.py tabla --anio 2026 --desde 20000 --hasta 40000 --paso 10000
-```
-
-Salida:
-
-```text
-Año  | Bruto anual | Coste empresa | SS empresa  | SS trabajador | IRPF       | Neto anual  | Neto mensual (12p)
------+-------------+---------------+-------------+---------------+------------+-------------+-------------------
-2026 | 20,000.00 € |   26,430.00 € |  6,430.00 € |    1,300.00 € | 1,773.32 € | 16,926.68 € |         1,410.56 €
-2026 | 30,000.00 € |   39,645.00 € |  9,645.00 € |    1,950.00 € | 4,926.00 € | 23,124.00 € |         1,927.00 €
-2026 | 40,000.00 € |   52,860.00 € | 12,860.00 € |    2,600.00 € | 7,745.00 € | 29,655.00 € |         2,471.25 €
-```
-
-## Comparar años
-
-Compara el mismo bruto nominal entre varios años.
-
-```bash
-python3 cli.py comparar 30000 --desde-anio 2024 --hasta-anio 2026
-```
-
-Salida:
-
-```text
-Año  | Bruto anual | Coste empresa | SS empresa | SS trabajador | IRPF       | Neto anual  | Neto mensual (12p)
------+-------------+---------------+------------+---------------+------------+-------------+-------------------
-2024 | 30,000.00 € |   39,594.00 € | 9,594.00 € |    1,941.00 € | 4,928.70 € | 23,130.30 € |         1,927.52 €
-2025 | 30,000.00 € |   39,621.00 € | 9,621.00 € |    1,944.00 € | 4,927.80 € | 23,128.20 € |         1,927.35 €
-2026 | 30,000.00 € |   39,645.00 € | 9,645.00 € |    1,950.00 € | 4,926.00 € | 23,124.00 € |         1,927.00 €
-```
-
-## Comparar con IPC
-
-Compara un salario actual con el salario equivalente de un año anterior manteniendo la misma capacidad económica real. Por defecto compara contra 2019 y usa 2026 como año actual.
+Para cambiar los años:
 
 ```bash
 python3 cli.py ipc 30000 --anio-base 2019 --anio-actual 2026
 ```
 
-Salida:
+## Rentas bajas: tipo marginal efectivo
 
-```text
-Concepto    | Año  | Bruto anual | IPC acumulado | IRPF       | Neto anual  | Neto en euros 2026 | Dif. anual vs actual | Dif. mensual (12p)
-------------+------+-------------+---------------+------------+-------------+--------------------+----------------------+-------------------
-2019 equiv. | 2019 | 23,843.46 € |       1.2582x | 3,209.82 € | 19,119.58 € |        24,056.38 € |             932.38 € |            77.70 €
-2026 actual | 2026 | 30,000.00 € |       1.0000x | 4,926.00 € | 23,124.00 € |        23,124.00 € |               0.00 € |             0.00 €
-```
-
-## Tipo marginal efectivo
-
-Muestra cuánto sube el neto anual por cada subida de bruto dentro de un rango. Es útil para ver zonas donde una subida salarial se convierte en poco neto disponible.
+`marginal` muestra cuánto neto queda de cada subida bruta dentro de un rango. Es útil para ver zonas donde una subida salarial se convierte en poco neto disponible.
 
 ```bash
 python3 cli.py marginal --anio 2026 --desde 16500 --hasta 18500 --paso 500
@@ -119,15 +54,81 @@ Año  | Bruto anual | Neto anual  | Subida bruta | Subida neta | Tipo marginal e
 2026 | 18,500.00 € | 16,329.42 € |     500.00 € |    123.23 € |                75.35 %
 ```
 
-## Ejecutar como script
+## Otros comandos
 
-`cli.py` puede ejecutarse directamente si tiene permisos de ejecución:
+Calcular un salario concreto:
 
 ```bash
-./cli.py salario 30000 --anio 2026
+python3 cli.py salario 30000
 ```
 
-La salida es equivalente a `python3 cli.py salario 30000 --anio 2026`.
+Salida:
+
+```text
+Año  | Bruto anual | Coste empresa | SS empresa | SS trabajador | IRPF       | Neto anual  | Neto mensual (12p)
+-----+-------------+---------------+------------+---------------+------------+-------------+-------------------
+2026 | 30,000.00 € |   39,645.00 € | 9,645.00 € |    1,950.00 € | 4,926.00 € | 23,124.00 € |         1,927.00 €
+```
+
+Generar una tabla pequeña por rango salarial:
+
+```bash
+python3 cli.py tabla --anio 2026 --desde 20000 --hasta 40000 --paso 10000
+```
+
+Salida:
+
+```text
+Año  | Bruto anual | Coste empresa | SS empresa  | SS trabajador | IRPF       | Neto anual  | Neto mensual (12p)
+-----+-------------+---------------+-------------+---------------+------------+-------------+-------------------
+2026 | 20,000.00 € |   26,430.00 € |  6,430.00 € |    1,300.00 € | 1,773.32 € | 16,926.68 € |         1,410.56 €
+2026 | 30,000.00 € |   39,645.00 € |  9,645.00 € |    1,950.00 € | 4,926.00 € | 23,124.00 € |         1,927.00 €
+2026 | 40,000.00 € |   52,860.00 € | 12,860.00 € |    2,600.00 € | 7,745.00 € | 29,655.00 € |         2,471.25 €
+```
+
+Comparar el mismo bruto nominal entre años:
+
+```bash
+python3 cli.py comparar 30000 --desde-anio 2024 --hasta-anio 2026
+```
+
+Salida:
+
+```text
+Año  | Bruto anual | Coste empresa | SS empresa | SS trabajador | IRPF       | Neto anual  | Neto mensual (12p)
+-----+-------------+---------------+------------+---------------+------------+-------------+-------------------
+2024 | 30,000.00 € |   39,594.00 € | 9,594.00 € |    1,941.00 € | 4,928.70 € | 23,130.30 € |         1,927.52 €
+2025 | 30,000.00 € |   39,621.00 € | 9,621.00 € |    1,944.00 € | 4,927.80 € | 23,128.20 € |         1,927.35 €
+2026 | 30,000.00 € |   39,645.00 € | 9,645.00 € |    1,950.00 € | 4,926.00 € | 23,124.00 € |         1,927.00 €
+```
+
+`comparar` no ajusta por inflación. Para la comparación de salario real 2019 vs 2026, usa `ipc`.
+
+## Instalación y ayuda
+
+Instala las dependencias del proyecto:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+Ver comandos disponibles:
+
+```bash
+python3 cli.py --help
+```
+
+Salida resumida:
+
+```text
+usage: cli.py [-h] {ipc,marginal,salario,tabla,comparar} ...
+```
+
+`cli.py` también puede ejecutarse directamente si tiene permisos de ejecución:
+
+```bash
+./cli.py ipc 30000
+```
 
 ## Nota
 

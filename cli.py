@@ -84,31 +84,39 @@ def calcular_comparativa_ipc(bruto_actual, anio_base, anio_actual, pagas):
 
     base = calcular_nomina_resumen(bruto_base, anio_base, pagas)
     actual = calcular_nomina_resumen(bruto_actual, anio_actual, pagas)
+    irpf_base_actualizado = base["IRPF"] * inflacion
     neto_base_actualizado = base["Neto anual"] * inflacion
-    diferencia_anual = neto_base_actualizado - actual["Neto anual"]
+    tipo_base = irpf_base_actualizado / bruto_actual * 100 if bruto_actual else 0.0
+    tipo_actual = actual["IRPF"] / bruto_actual * 100 if bruto_actual else 0.0
+    diferencia_irpf = actual["IRPF"] - irpf_base_actualizado
+    diferencia_neto = actual["Neto anual"] - neto_base_actualizado
 
     return [
         {
             "Concepto": f"{anio_base} equiv.",
             "Año": anio_base,
-            "Bruto anual": bruto_base,
-            "IPC acumulado": inflacion,
-            "IRPF": base["IRPF"],
-            "Neto anual": base["Neto anual"],
-            f"Neto en euros {anio_actual}": neto_base_actualizado,
-            "Dif. anual vs actual": diferencia_anual,
-            f"Dif. mensual ({pagas}p)": diferencia_anual / pagas,
+            "Bruto nominal": bruto_base,
+            f"Bruto {anio_actual}": bruto_actual,
+            "IPC": inflacion,
+            f"IRPF {anio_actual}": irpf_base_actualizado,
+            "Tipo IRPF": tipo_base,
+            "Dif. tipo": 0.0,
+            f"Neto {anio_actual}": neto_base_actualizado,
+            "Dif. IRPF": 0.0,
+            f"Dif. neto/mes ({pagas}p)": 0.0,
         },
         {
             "Concepto": f"{anio_actual} actual",
             "Año": anio_actual,
-            "Bruto anual": bruto_actual,
-            "IPC acumulado": 1.0,
-            "IRPF": actual["IRPF"],
-            "Neto anual": actual["Neto anual"],
-            f"Neto en euros {anio_actual}": actual["Neto anual"],
-            "Dif. anual vs actual": 0.0,
-            f"Dif. mensual ({pagas}p)": 0.0,
+            "Bruto nominal": bruto_actual,
+            f"Bruto {anio_actual}": bruto_actual,
+            "IPC": 1.0,
+            f"IRPF {anio_actual}": actual["IRPF"],
+            "Tipo IRPF": tipo_actual,
+            "Dif. tipo": tipo_actual - tipo_base,
+            f"Neto {anio_actual}": actual["Neto anual"],
+            "Dif. IRPF": diferencia_irpf,
+            f"Dif. neto/mes ({pagas}p)": diferencia_neto / pagas,
         },
     ]
 
@@ -128,9 +136,11 @@ def imprimir_tabla(filas):
                 valores.append(str(valor))
             elif columna in {"Concepto"}:
                 valores.append(str(valor))
-            elif columna == "Tipo marginal efectivo":
+            elif columna in {"Tipo marginal efectivo", "Tipo IRPF"}:
                 valores.append(f"{valor:,.2f} %")
-            elif columna == "IPC acumulado":
+            elif columna == "Dif. tipo":
+                valores.append(f"{valor:,.2f} p.p.")
+            elif columna == "IPC":
                 valores.append(f"{valor:,.4f}x")
             else:
                 valores.append(formatear_euros(valor))
@@ -203,6 +213,26 @@ def crear_parser():
     )
     subparsers = parser.add_subparsers(dest="comando", required=True)
 
+    ipc = subparsers.add_parser(
+        "ipc",
+        help="Compara un salario actual con su equivalente real en un año anterior.",
+    )
+    ipc.add_argument("bruto_actual", type=float, help="Salario bruto anual del año actual.")
+    ipc.add_argument("--anio-base", type=int, default=2019, choices=range(2012, 2027), metavar="YYYY")
+    ipc.add_argument("--anio-actual", type=int, default=2026, choices=range(2012, 2027), metavar="YYYY")
+    ipc.add_argument("--pagas", type=int, default=12, help="Número de pagas para la diferencia mensual.")
+    ipc.set_defaults(func=cmd_ipc)
+
+    marginal = subparsers.add_parser(
+        "marginal",
+        help="Muestra cuánto neto queda de cada subida bruta dentro de un rango.",
+    )
+    marginal.add_argument("--anio", type=int, default=2026, choices=range(2012, 2027), metavar="YYYY")
+    marginal.add_argument("--desde", type=float, default=15000, help="Primer bruto anual.")
+    marginal.add_argument("--hasta", type=float, default=25000, help="Último bruto anual.")
+    marginal.add_argument("--paso", type=float, default=500, help="Salto entre salarios.")
+    marginal.set_defaults(func=cmd_marginal)
+
     salario = subparsers.add_parser("salario", help="Calcula una nómina anual concreta.")
     salario.add_argument("bruto", type=float, help="Salario bruto anual.")
     salario.add_argument("--anio", type=int, default=2026, choices=range(2012, 2027), metavar="YYYY")
@@ -223,26 +253,6 @@ def crear_parser():
     comparar.add_argument("--hasta-anio", type=int, default=2026, choices=range(2012, 2027), metavar="YYYY")
     comparar.add_argument("--pagas", type=int, default=12, help="Número de pagas para el neto mensual.")
     comparar.set_defaults(func=cmd_comparar)
-
-    marginal = subparsers.add_parser(
-        "marginal",
-        help="Muestra cuánto neto queda de cada subida bruta dentro de un rango.",
-    )
-    marginal.add_argument("--anio", type=int, default=2026, choices=range(2012, 2027), metavar="YYYY")
-    marginal.add_argument("--desde", type=float, default=15000, help="Primer bruto anual.")
-    marginal.add_argument("--hasta", type=float, default=25000, help="Último bruto anual.")
-    marginal.add_argument("--paso", type=float, default=500, help="Salto entre salarios.")
-    marginal.set_defaults(func=cmd_marginal)
-
-    ipc = subparsers.add_parser(
-        "ipc",
-        help="Compara un salario actual con su equivalente real en un año anterior.",
-    )
-    ipc.add_argument("bruto_actual", type=float, help="Salario bruto anual del año actual.")
-    ipc.add_argument("--anio-base", type=int, default=2019, choices=range(2012, 2027), metavar="YYYY")
-    ipc.add_argument("--anio-actual", type=int, default=2026, choices=range(2012, 2027), metavar="YYYY")
-    ipc.add_argument("--pagas", type=int, default=12, help="Número de pagas para la diferencia mensual.")
-    ipc.set_defaults(func=cmd_ipc)
 
     return parser
 
